@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ColdCalc — Carga Térmica para Câmaras Frigoríficas</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08111a;
+    --panel: #0d1e2c;
+    --panel2: #112233;
+    --border: #1a3348;
+    --accent: #00c8e0;
+    --accent2: #00e8a2;
+    --warn: #ff6b35;
+    --text: #cde8f5;
+    --muted: #4a7a96;
+    --white: #eaf6ff;
+    --glow: 0 0 18px rgba(0,200,224,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 10% 0%, rgba(0,200,224,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 100%, rgba(0,232,162,0.05) 0%, transparent 50%);
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: rgba(13,30,44,0.92);
+    backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: var(--glow);
+  }
+  header h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 2px;
+  }
+  header h1 span { color: var(--accent); }
+  header p { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    padding: 14px 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-align: center;
+    line-height: 1.3;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 56px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tab-btn.active {
+    color: #08111a;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+  .tab-btn:hover:not(.active) { color: var(--text); border-color: var(--accent); }
+
+  .nav-row {
+    display: flex; gap: 10px; margin-top: 16px;
+  }
+  .btn-nav {
+    flex: 1; padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel2);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    touch-action: manipulation;
+  }
+  .btn-nav:hover { border-color: var(--accent); color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px; font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before {
+    content: '';
+    width: 3px; height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  input, select {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--white);
+    padding: 9px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 14px;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,200,224,0.12);
+  }
+  select option { background: var(--panel2); }
+
+  .field { margin-bottom: 0; }
+
+  .btn-calc {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border: none; border-radius: 10px;
+    color: #08111a;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px; font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 8px;
+    box-shadow: 0 4px 24px rgba(0,200,224,0.25);
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-calc:hover { opacity: 0.92; transform: translateY(-1px); }
+  .btn-calc:active { transform: translateY(0); }
+
+  /* Results */
+  #results { display: none; }
+  .result-hero {
+    background: linear-gradient(135deg, rgba(0,200,224,0.10), rgba(0,232,162,0.07));
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: var(--glow);
+  }
+  .result-hero p { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .result-hero .big-val {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 56px; font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .result-hero .unit { font-size: 22px; color: var(--accent2); font-weight: 400; }
+  .result-hero .sub { font-size: 20px; color: var(--muted); margin-top: 6px; }
+
+  .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .res-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .res-card .label { font-size: 10px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+  .res-card .val { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 600; color: var(--white); }
+  .res-card .val span { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .res-card .bar-wrap { background: var(--panel2); border-radius: 4px; height: 4px; margin-top: 6px; overflow: hidden; }
+  .res-card .bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .breakdown-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .breakdown-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(26,51,72,0.5);
+    color: var(--text);
+  }
+  .breakdown-table tr:last-child td { border-bottom: none; }
+  .breakdown-table td:last-child { text-align: right; color: var(--accent); font-weight: 500; }
+  .breakdown-table .total-row td { color: var(--white); font-weight: 600; border-top: 1px solid var(--border); padding-top: 12px; }
+  .breakdown-table .total-row td:last-child { color: var(--accent2); font-size: 14px; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .badge-ok { background: rgba(0,232,162,0.15); color: var(--accent2); border: 1px solid rgba(0,232,162,0.3); }
+  .badge-warn { background: rgba(255,107,53,0.15); color: var(--warn); border: 1px solid rgba(255,107,53,0.3); }
+
+  .hint { font-size: 11px; color: var(--muted); margin-top: -10px; margin-bottom: 14px; font-style: italic; }
+
+  .section-sep { height: 1px; background: var(--border); margin: 20px 0; }
+
+  @media (max-width: 700px) {
+    .grid2, .grid3, .result-grid { grid-template-columns: 1fr; }
+    header { padding: 14px 16px; }
+    .container { padding: 16px 10px 50px; }
+    .result-hero .big-val { font-size: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">❄</div>
+  <div>
+    <h1>COLD<span>CALC</span></h1>
+    <p>Cálculo de Carga Térmica — Câmaras Frigoríficas</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tbtn-dados" onclick="showTab('dados')">① Dados<br>Gerais</button>
+    <button class="tab-btn" id="tbtn-paredes" onclick="showTab('paredes')">② Envelope<br>Isolante</button>
+    <button class="tab-btn" id="tbtn-cargas" onclick="showTab('cargas')">③ Cargas<br>Internas</button>
+    <button class="tab-btn" id="tbtn-produto" onclick="showTab('produto')">④ Produto<br>/ Calcular</button>
+  </div>
+
+  <!-- TAB 1: DADOS GERAIS -->
+  <div id="tab-dados" class="tab-content active">
+    <div class="card">
+      <div class="card-title">Dimensões da Câmara</div>
+      <div class="grid3">
+        <div class="field">
+          <label>Comprimento (m)</label>
+          <input type="number" id="comp" value="6" step="0.1" min="0.5">
+        </div>
+        <div class="field">
+          <label>Largura (m)</label>
+          <input type="number" id="larg" value="4" step="0.1" min="0.5">
+        </div>
+        <div class="field">
+          <label>Pé-direito (m)</label>
+          <input type="number" id="alt" value="3" step="0.1" min="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Temperaturas de Projeto</div>
+      <div class="grid3">
+        <div class="field">
+          <label>Temp. Externa / Amb. (°C)</label>
+          <input type="number" id="t_ext" value="32" step="0.5">
+        </div>
+        <div class="field">
+          <label>Temp. Interna da Câmara (°C)</label>
+          <input type="number" id="t_int" value="2" step="0.5">
+        </div>
+        <div class="field">
+          <label>Umidade Relativa Interna (%)</label>
+          <input type="number" id="ur_int" value="90" step="1" min="50" max="100">
+        </div>
+      </div>
+      <div class="field">
+        <label>Aplicação / Tipo de Câmara</label>
+        <select id="tipo_cam">
+          <option value="resfriamento">Câmara de Resfriamento (0 °C a 10 °C)</option>
+          <option value="congelamento">Câmara de Congelamento (-18 °C a -30 °C)</option>
+          <option value="ultra">Ultra-congelamento (abaixo de -30 °C)</option>
+          <option value="fruta">Câmara de Frutas/Verduras (2 °C a 8 °C)</option>
+          <option value="carnes">Câmara de Carnes (−2 °C a +2 °C)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Condições de Operação</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Horas de Operação / Dia</label>
+          <input type="number" id="horas_op" value="24" min="1" max="24">
+        </div>
+        <div class="field">
+          <label>Nº de Aberturas de Porta / Dia</label>
+          <input type="number" id="abert_porta" value="10" min="0">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Localização (cidade referência)</label>
+          <select id="localizacao">
+            <option value="nordeste">Nordeste / Litoral (temp. alta, úmida)</option>
+            <option value="sudeste" selected>Sudeste (São Paulo, Rio)</option>
+            <option value="sul">Sul (Curitiba, Porto Alegre)</option>
+            <option value="centroeste">Centro-Oeste</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Fator de Segurança (%)</label>
+          <input type="number" id="fs" value="15" min="5" max="40">
+        </div>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="showTab('paredes')">② Próximo: Envelope →</button>
+    </div>
+  </div>
+
+  <!-- TAB 2: ENVELOPE -->
+  <div id="tab-paredes" class="tab-content">
+    <div class="card">
+      <div class="card-title">Paredes Laterais e Teto</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Espessura do Isopainel PIR (mm)</label>
+          <select id="esp_painel">
+            <option value="70">70 mm — Resfriamento leve / antecâmaras</option>
+            <option value="100" selected>100 mm — Câmara padrão (resfriamento)</option>
+            <option value="120">120 mm — Congelamento industrial</option>
+            <option value="150">150 mm — Ultra-congelamento / câmaras grandes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Material do Painel</label>
+          <select id="mat_painel">
+            <option value="pir" selected>Isopainel PIR — λ = 0,018 W/m·K</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Resistência térmica superficial interna (m²·K/W)</label>
+          <input type="number" id="rsi" value="0.13" step="0.01" min="0.05">
+        </div>
+        <div class="field">
+          <label>Resistência térmica superficial externa (m²·K/W)</label>
+          <input type="number" id="rse" value="0.04" step="0.01" min="0.02">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Piso</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Tipo de Isolamento do Piso</label>
+          <select id="tipo_piso">
+            <option value="sem">Sem isolamento</option>
+            <option value="fraco">Isolamento fraco (50 mm EPS)</option>
+            <option value="padrao" selected>Padrão (75 mm PU)</option>
+            <option value="refor">Reforçado (100 mm PU)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Solo / Subsolo (°C)</label>
+          <input type="number" id="t_solo" value="20" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Orientação das Paredes</div>
+      <p class="hint">Paredes expostas ao sol recebem carga adicional de radiação solar.</p>
+      <div class="grid2">
+        <div class="field">
+          <label>Paredes Expostas ao Sol</label>
+          <select id="paredes_sol">
+            <option value="0">Nenhuma (interior / galpão coberto)</option>
+            <option value="1" selected>1 parede ao sol</option>
+            <option value="2">2 paredes ao sol</option>
+            <option value="3">3 paredes ao sol</option>
+            <option value="4">4 paredes + teto ao sol</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Incidência Solar no Teto</label>
+          <select id="teto_sol">
+            <option value="sim">Sim (telhado / cobertura exposta)</option>
+            <option value="nao" selected>Não (dentro de galpão)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="showTab('dados')">← ① Dados Gerais</button>
+      <button class="btn-nav" onclick="showTab('cargas')">③ Próximo: Cargas →</button>
+    </div>
+  </div>
+
+  <!-- TAB 3: CARGAS INTERNAS -->
+  <div id="tab-cargas" class="tab-content">
+    <div class="card">
+      <div class="card-title">Iluminação</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Potência de Iluminação (W/m²)</label>
+          <input type="number" id="ilum_wm2" value="10" step="1" min="0">
+          <p class="hint">Câmaras simples: 5–10 W/m². Com LED: 5 W/m²</p>
+        </div>
+        <div class="field">
+          <label>Horas de Iluminação Acesa / Dia</label>
+          <input type="number" id="horas_ilum" value="8" step="0.5" min="0" max="24">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pessoas Trabalhando na Câmara</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Nº de Pessoas</label>
+          <input type="number" id="npessoas" value="2" min="0">
+        </div>
+        <div class="field">
+          <label>Horas de Trabalho / Dia</label>
+          <input type="number" id="horas_pess" value="4" step="0.5" min="0" max="24">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Motores e Equipamentos Internos</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Potência de Motores Internos (W)</label>
+          <input type="number" id="motores" value="500" step="50" min="0">
+          <p class="hint">Esteiras, elevadores, empilhadeiras elétricas, etc.</p>
+        </div>
+        <div class="field">
+          <label>Horas de Uso / Dia</label>
+          <input type="number" id="horas_mot" value="6" step="0.5" min="0" max="24">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Abertura de Portas (Infiltração de Ar)</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Largura da Porta (m)</label>
+          <input type="number" id="porta_larg" value="1.2" step="0.1" min="0.5">
+        </div>
+        <div class="field">
+          <label>Altura da Porta (m)</label>
+          <input type="number" id="porta_alt" value="2.1" step="0.1" min="1">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Tempo Médio Aberta por Vez (s)</label>
+          <input type="number" id="t_porta" value="30" step="5" min="5">
+        </div>
+        <div class="field">
+          <label>Cortina de Ar / PVC</label>
+          <select id="cortina">
+            <option value="1.0">Sem cortina (fator 1,0)</option>
+            <option value="0.7" selected>Cortina PVC (fator 0,7)</option>
+            <option value="0.4">Cortina de ar (fator 0,4)</option>
+            <option value="0.15">Antecâmara + cortina (fator 0,15)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="showTab('paredes')">← ② Envelope</button>
+      <button class="btn-nav" onclick="showTab('produto')">④ Próximo: Produto →</button>
+    </div>
+  </div>
+
+  <!-- TAB 4: PRODUTO -->
+  <div id="tab-produto" class="tab-content">
+    <div class="card">
+      <div class="card-title">Produto Armazenado / Resfriado</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Massa de Produto por Dia (kg/dia)</label>
+          <input type="number" id="massa_prod" value="500" step="10" min="0">
+          <p class="hint">Entrada diária de produto a ser resfriado</p>
+        </div>
+        <div class="field">
+          <label>Temperatura de Entrada do Produto (°C)</label>
+          <input type="number" id="t_prod_ent" value="20" step="0.5">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Tipo de Produto</label>
+          <select id="tipo_prod" onchange="updateCalorEsp()">
+            <option value="carne_bov">Carne bovina — cp = 3,43 kJ/kg·K</option>
+            <option value="carne_frang">Frango — cp = 3,31 kJ/kg·K</option>
+            <option value="peixe">Peixe / Frutos do Mar — cp = 3,60 kJ/kg·K</option>
+            <option value="frutas">Frutas e Verduras — cp = 3,89 kJ/kg·K</option>
+            <option value="laticinios">Laticínios / Queijo — cp = 3,35 kJ/kg·K</option>
+            <option value="sorvete">Sorvete / Gelado — cp = 2,09 kJ/kg·K</option>
+            <option value="embal">Embalados Industriais — cp = 2,50 kJ/kg·K</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Calor Específico do Produto (kJ/kg·K)</label>
+          <input type="number" id="cp_prod" value="3.43" step="0.01" min="0.1">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Calor de Respiração (Produtos Frescos)</div>
+      <p class="hint">Apenas para frutas, verduras e produtos vivos.</p>
+      <div class="grid2">
+        <div class="field">
+          <label>Massa Total em Estoque (kg)</label>
+          <input type="number" id="estoque_kg" value="3000" step="100" min="0">
+        </div>
+        <div class="field">
+          <label>Taxa de Respiração (W/ton)</label>
+          <select id="taxa_resp">
+            <option value="0">Não aplicável (produtos processados/carnes)</option>
+            <option value="10">Baixa — Maçã, pera, batata (~10 W/ton)</option>
+            <option value="25">Média — Laranja, cenoura (~25 W/ton)</option>
+            <option value="60">Alta — Morango, brócolis (~60 W/ton)</option>
+            <option value="120">Muito Alta — Aspargos, milho verde (~120 W/ton)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Embalagens</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Massa de Embalagem / Dia (kg/dia)</label>
+          <input type="number" id="massa_emb" value="50" step="5" min="0">
+        </div>
+        <div class="field">
+          <label>Calor Específico Embalagem (kJ/kg·K)</label>
+          <input type="number" id="cp_emb" value="1.8" step="0.1" min="0.5">
+        </div>
+      </div>
+    </div>
+
+    <div class="section-sep"></div>
+    <div class="nav-row" style="margin-bottom:10px;">
+      <button class="btn-nav" onclick="showTab('cargas')">← ③ Cargas Internas</button>
+    </div>
+    <button class="btn-calc" onclick="calcular()">⚡ CALCULAR CARGA TÉRMICA</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="section-sep"></div>
+    <div class="result-hero">
+      <p>Carga Térmica Total (com fator de segurança)</p>
+      <div class="big-val" id="res-total">—</div>
+      <div class="unit"><span id="res-kcal">—</span> kcal/h  <span style="color:var(--muted);font-size:16px;">|</span>  <span id="res-kw">—</span> kW  <span style="color:var(--muted);font-size:16px;">|</span>  <span id="res-tr">—</span> TR</div>
+      <div class="sub" id="res-cv">— CV (HP)</div>
+    </div>
+
+    <div class="result-grid">
+      <div class="res-card">
+        <div class="label">Transmissão / Condução (kcal/h)</div>
+        <div class="val" id="r-cond">—</div>
+        <div class="bar-wrap"><div class="bar" id="b-cond" style="width:0%"></div></div>
+      </div>
+      <div class="res-card">
+        <div class="label">Infiltração de Ar (kcal/h)</div>
+        <div class="val" id="r-infil">—</div>
+        <div class="bar-wrap"><div class="bar" id="b-infil" style="width:0%"></div></div>
+      </div>
+      <div class="res-card">
+        <div class="label">Iluminação (kcal/h)</div>
+        <div class="val" id="r-ilum">—</div>
+        <div class="bar-wrap"><div class="bar" id="b-ilum" style="width:0%"></div></div>
+      </div>
+      <div class="res-card">
+        <div class="label">Pessoas (kcal/h)</div>
+        <div class="val" id="r-pess">—</div>
+        <div class="bar-wrap"><div class="bar" id="b-pess" style="width:0%"></div></div>
+      </div>
+      <div class="res-card">
+        <div class="label">Motores (kcal/h)</div>
+        <div class="val" id="r-mot">—</div>
+        <div class="bar-wrap"><div class="bar" id="b-mot" style="width:0%"></div></div>
+      </div>
+      <div class="res-card">
+        <div class="label">Produto + Embalagem (kcal/h)</div>
+        <div class="val" id="r-prod">—</div>
+        <div class="bar-wrap"><div class="bar" id="b-prod" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Detalhamento do Cálculo</div>
+      <table class="breakdown-table">
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Descrição</th>
+            <th>Carga (kcal/h)</th>
+          </tr>
+        </thead>
+        <tbody id="breakdown-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="rec-card">
+      <div class="card-title">Recomendações do Sistema</div>
+      <div id="recomendacoes"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const btn = document.getElementById('tbtn-' + name);
+  if (btn) btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+const cpMap = {
+  carne_bov: 3.43, carne_frang: 3.31, peixe: 3.60,
+  frutas: 3.89, laticinios: 3.35, sorvete: 2.09,
+  embal: 2.50, custom: null
+};
+
+function updateCalorEsp() {
+  const sel = document.getElementById('tipo_prod').value;
+  if (cpMap[sel]) document.getElementById('cp_prod').value = cpMap[sel];
+}
+
+// Conductivity map
+const lambdaMap = { pu: 0.022, eps: 0.040, pir: 0.018 };
+
+// Calor por pessoa em câmaras frias (W/pessoa) — NBR approx
+function calorPessoa(tint) {
+  if (tint >= 0) return 270;
+  if (tint >= -10) return 350;
+  return 450;
+}
+
+function calcular() {
+  // --- Dados Gerais ---
+  const comp = parseFloat(document.getElementById('comp').value);
+  const larg = parseFloat(document.getElementById('larg').value);
+  const alt  = parseFloat(document.getElementById('alt').value);
+  const t_ext = parseFloat(document.getElementById('t_ext').value);
+  const t_int = parseFloat(document.getElementById('t_int').value);
+  const fs = parseFloat(document.getElementById('fs').value) / 100;
+  const horas_op = parseFloat(document.getElementById('horas_op').value);
+  const abert_porta = parseFloat(document.getElementById('abert_porta').value);
+
+  const delta_T = t_ext - t_int;
+
+  // --- Envelope ---
+  const esp_mm = parseFloat(document.getElementById('esp_painel').value);
+  const esp_m = esp_mm / 1000;
+  const mat = document.getElementById('mat_painel').value;
+  const lambda = lambdaMap[mat];
+  const rsi = parseFloat(document.getElementById('rsi').value);
+  const rse = parseFloat(document.getElementById('rse').value);
+  const R_parede = rsi + (esp_m / lambda) + rse;
+  const U_parede = 1 / R_parede;
+
+  // Áreas
+  const A_paredes = 2 * (comp + larg) * alt;
+  const A_teto = comp * larg;
+  const A_piso = comp * larg;
+
+  // Solar gain factor
+  const sol_fator_parede = parseFloat(document.getElementById('paredes_sol').value) * 8; // W/m² adicionais médio
+  const teto_sol = document.getElementById('teto_sol').value === 'sim' ? 15 : 0;
+
+  // Piso
+  const pisoMap = { sem: 0.4, fraco: 0.25, padrao: 0.17, refor: 0.13 };
+  const U_piso = pisoMap[document.getElementById('tipo_piso').value];
+  const t_solo = parseFloat(document.getElementById('t_solo').value);
+  const delta_piso = t_solo - t_int;
+
+  // Q transmissão
+  const Q_paredes = U_parede * A_paredes * delta_T + (sol_fator_parede * A_paredes * parseFloat(document.getElementById('paredes_sol').value) / 4);
+  const Q_teto = U_parede * A_teto * (delta_T + teto_sol);
+  const Q_piso = U_piso * A_piso * delta_piso;
+  const Q_cond = Q_paredes + Q_teto + Q_piso;
+
+  // --- Infiltração de Ar ---
+  const p_larg = parseFloat(document.getElementById('porta_larg').value);
+  const p_alt  = parseFloat(document.getElementById('porta_alt').value);
+  const t_porta = parseFloat(document.getElementById('t_porta').value);
+  const cortina = parseFloat(document.getElementById('cortina').value);
+
+  // Método simplificado ASHRAE — fluxo de ar pela porta
+  const A_porta = p_larg * p_alt;
+  const h_ext = 50 + (t_ext * 1.0); // entalpia externa simplificada kJ/kg (aprox)
+  const h_int = 10 + (t_int * 0.5); // entalpia interna simplificada
+  const delta_h = Math.max(h_ext - h_int, 5); // kJ/kg
+  const rho_ar = 1.2; // kg/m³ aprox
+  const v_ar = 0.8; // m/s velocidade média infiltração
+  const Q_ar_por_ab = A_porta * v_ar * rho_ar * delta_h * 1000 / 3600; // W por abertura por segundo
+  const Q_infil = Q_ar_por_ab * t_porta * abert_porta * cortina;
+
+  // --- Cargas Internas ---
+  // Iluminação
+  const ilum_wm2 = parseFloat(document.getElementById('ilum_wm2').value);
+  const horas_ilum = parseFloat(document.getElementById('horas_ilum').value);
+  const Q_ilum = ilum_wm2 * A_piso * (horas_ilum / 24);
+
+  // Pessoas
+  const npessoas = parseFloat(document.getElementById('npessoas').value);
+  const horas_pess = parseFloat(document.getElementById('horas_pess').value);
+  const cp_pessoa = calorPessoa(t_int);
+  const Q_pess = npessoas * cp_pessoa * (horas_pess / 24);
+
+  // Motores
+  const motores_W = parseFloat(document.getElementById('motores').value);
+  const horas_mot = parseFloat(document.getElementById('horas_mot').value);
+  const Q_mot = motores_W * (horas_mot / 24);
+
+  // --- Produto ---
+  const massa_prod = parseFloat(document.getElementById('massa_prod').value);
+  const t_prod_ent = parseFloat(document.getElementById('t_prod_ent').value);
+  const cp_prod = parseFloat(document.getElementById('cp_prod').value);
+  const delta_prod = t_prod_ent - t_int;
+  const Q_prod_raw = (massa_prod * cp_prod * 1000 * delta_prod) / (24 * 3600); // W
+
+  // Embalagens
+  const massa_emb = parseFloat(document.getElementById('massa_emb').value);
+  const cp_emb = parseFloat(document.getElementById('cp_emb').value);
+  const Q_emb = (massa_emb * cp_emb * 1000 * delta_prod) / (24 * 3600);
+
+  // Respiração
+  const estoque_kg = parseFloat(document.getElementById('estoque_kg').value);
+  const taxa_resp = parseFloat(document.getElementById('taxa_resp').value);
+  const Q_resp = (estoque_kg / 1000) * taxa_resp;
+
+  const Q_prod = Q_prod_raw + Q_emb + Q_resp;
+
+  // Total sem FS
+  const Q_sub = Q_cond + Q_infil + Q_ilum + Q_pess + Q_mot + Q_prod;
+  const Q_total = Q_sub * (1 + fs);
+
+  // Conversões
+  const W2K = 0.86; // 1 W = 0,86 kcal/h
+  const kcalh = Q_total * W2K;
+  const kW = Q_total / 1000;
+  const TR = Q_total / 3517;
+  const CV = kW / 0.736;
+
+  // --- Exibir ---
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('res-total').textContent = Math.round(kcalh).toLocaleString('pt-BR') + ' kcal/h';
+  document.getElementById('res-kcal').textContent = Math.round(kcalh).toLocaleString('pt-BR');
+  document.getElementById('res-kw').textContent = kW.toFixed(2);
+  document.getElementById('res-tr').textContent = TR.toFixed(2);
+  document.getElementById('res-cv').textContent = CV.toFixed(1) + ' CV (HP)';
+
+  // Barras — converter componentes para kcal/h
+  const componentes = [Q_cond, Q_infil, Q_ilum, Q_pess, Q_mot, Q_prod].map(v => v * W2K);
+  const ids_r = ['r-cond','r-infil','r-ilum','r-pess','r-mot','r-prod'];
+  const ids_b = ['b-cond','b-infil','b-ilum','b-pess','b-mot','b-prod'];
+  const maxQ = Math.max(...componentes);
+  componentes.forEach((v, i) => {
+    document.getElementById(ids_r[i]).textContent = Math.round(v).toLocaleString('pt-BR');
+    document.getElementById(ids_b[i]).style.width = (maxQ > 0 ? (v / maxQ * 100) : 0) + '%';
+  });
+
+  // Breakdown — valores em kcal/h
+  const rows = [
+    ['Paredes laterais', `U=${U_parede.toFixed(3)} W/m²K · ΔT=${delta_T.toFixed(1)}°C · A=${A_paredes.toFixed(1)} m²`, Math.round(Q_paredes * W2K)],
+    ['Teto', `U=${U_parede.toFixed(3)} W/m²K · A=${A_teto.toFixed(1)} m²`, Math.round(Q_teto * W2K)],
+    ['Piso', `U=${U_piso} W/m²K · ΔT solo=${delta_piso.toFixed(1)}°C · A=${A_piso.toFixed(1)} m²`, Math.round(Q_piso * W2K)],
+    ['Infiltração por portas', `${abert_porta}×/dia · ${t_porta}s · fator cortina ${cortina}`, Math.round(Q_infil * W2K)],
+    ['Iluminação', `${ilum_wm2} W/m² · ${A_piso.toFixed(1)} m² · ${horas_ilum}h/dia`, Math.round(Q_ilum * W2K)],
+    ['Pessoas', `${npessoas} pessoas · ${cp_pessoa} W/p · ${horas_pess}h/dia`, Math.round(Q_pess * W2K)],
+    ['Motores / Equipamentos', `${motores_W} W instalados · ${horas_mot}h/dia`, Math.round(Q_mot * W2K)],
+    ['Produto (resfriamento)', `${massa_prod} kg/dia · cp=${cp_prod} kJ/kg·K · ΔT=${delta_prod.toFixed(1)}°C`, Math.round(Q_prod_raw * W2K)],
+    ['Embalagens', `${massa_emb} kg/dia · cp=${cp_emb} kJ/kg·K`, Math.round(Q_emb * W2K)],
+    ['Calor de respiração', `${estoque_kg} kg estoque · ${taxa_resp} W/ton`, Math.round(Q_resp * W2K)],
+    ['— Subtotal —', '', Math.round(Q_sub * W2K)],
+    [`Fator de Segurança (${(fs*100).toFixed(0)}%)`, '', Math.round(Q_sub * fs * W2K)],
+  ];
+
+  let tbody = '';
+  rows.forEach((r, i) => {
+    const isTot = i >= rows.length - 2;
+    tbody += `<tr class="${isTot ? 'total-row' : ''}">
+      <td>${r[0]}</td><td style="color:var(--muted)">${r[1]}</td>
+      <td>${r[2].toLocaleString('pt-BR')}</td>
+    </tr>`;
+  });
+  tbody += `<tr class="total-row">
+    <td><strong>TOTAL FINAL</strong></td>
+    <td><span class="badge badge-ok">com FS</span></td>
+    <td><strong>${Math.round(kcalh).toLocaleString('pt-BR')} kcal/h</strong></td>
+  </tr>`;
+  document.getElementById('breakdown-body').innerHTML = tbody;
+
+  // Recomendações
+  const TR_rec = Math.ceil(TR * 10) / 10;
+  let rec = `<p style="margin-bottom:12px;font-size:13px;color:var(--text);">
+    Com base nos <strong style="color:var(--accent)">${Math.round(kcalh).toLocaleString('pt-BR')} kcal/h</strong> (${TR.toFixed(2)} TR) calculados, 
+    considere os seguintes equipamentos:
+  </p>`;
+
+  rec += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">`;
+  const tips = [
+    [`🔧 Capacidade do Compressor`, `Mínimo <strong>${kW.toFixed(1)} kW</strong> — recomendado ${(kW*1.1).toFixed(1)} kW (folga 10%)`],
+    [`❄ Evaporadores`, `${TR.toFixed(2)} TR de capacidade de troca térmica. ${TR < 5 ? 'Evaporador ventilado simples.' : 'Múltiplos evaporadores distribuídos.'}`],
+    [`🌡 Gás Refrigerante`, `${t_int >= 0 ? 'R-404A, R-448A ou R-449A (resfriamento)' : 'R-404A, R-507 ou R-448A (congelamento)'}`],
+    [`⚡ Demanda Elétrica`, `Estimativa: ~${(kW / 3.0).toFixed(1)} kW elétrico (COP ≈ 3,0)`],
+    [`📐 Isolamento`, `Espessura ${esp_mm}mm de ${mat.toUpperCase()} — ${U_parede < 0.3 ? `<span class="badge badge-ok">Adequado</span>` : `<span class="badge badge-warn">Verificar</span>`}`],
+    [`🕐 Autonomia`, `Sistema calculado para operação contínua de ${horas_op}h/dia`],
+  ];
+  tips.forEach(([t, d]) => {
+    rec += `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--accent);margin-bottom:4px;">${t}</div>
+      <div style="font-size:12px;color:var(--text);">${d}</div>
+    </div>`;
+  });
+  rec += `</div>`;
+  document.getElementById('recomendacoes').innerHTML = rec;
+
+  setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+</script>
+</body>
+</html>
